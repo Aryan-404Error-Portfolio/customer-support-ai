@@ -1,6 +1,6 @@
 from typing import List
-from langchain.schema import Document
-from langchain.llms import HuggingFaceHub
+from langchain_core.documents import Document
+from langchain_huggingface import HuggingFaceEndpoint
 from langchain.chains import ConversationalRetrievalChain
 from langchain.memory import ConversationBufferMemory
 from app.config import get_settings
@@ -11,9 +11,10 @@ class ChatService:
         self.settings = get_settings()
         self.kb = kb
         
-        self.llm = HuggingFaceHub(
+        self.llm = HuggingFaceEndpoint(
             repo_id="HuggingFaceH4/zephyr-7b-beta",
-            model_kwargs={"temperature": 0.3, "max_length": 512}
+            temperature=0.3,
+            max_new_tokens=512
         )
         
         self.memory = ConversationBufferMemory(
@@ -30,9 +31,8 @@ class ChatService:
     
     def ask(self, question: str) -> dict:
         try:
-            result = self.chain({"question": question})
+            result = self.chain.invoke({"question": question})
         except Exception:
-            # No docs indexed yet
             return {
                 "answer": "I don't have any documents to reference. Please upload company documents first, then ask your question.",
                 "sources": []
@@ -49,6 +49,3 @@ class ChatService:
             "answer": answer,
             "sources": list(set(s for s in sources if s))
         }
-    
-    def reset_memory(self):
-        self.memory.clear()
